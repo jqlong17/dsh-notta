@@ -33,14 +33,10 @@ center('Obsidian 里的笔记，想在 DSH 里直接读、直接改。', font(37
 
 # Screenshot: scale to 900 wide, rounded corners, soft shadow.
 shot = Image.open(shot_path).convert('RGB')
-# Crop to a wide band so the card keeps room for the selling points below.
-TARGET_ASPECT = 1.95
+# Keep the top band (title, formulas, diagram, caption) and drop the rest.
 sw, sh = shot.size
-if sw / sh < TARGET_ASPECT:
-    shot = shot.crop((0, 0, sw, int(sw / TARGET_ASPECT)))
-elif sw / sh > TARGET_ASPECT:
-    shot = shot.crop((0, 0, int(sh * TARGET_ASPECT), sh))
-tw = 1340
+shot = shot.crop((0, 0, sw, int(sh * 0.67)))
+tw = 1240
 th = int(shot.height * tw / shot.width)
 shot = shot.resize((tw, th), Image.LANCZOS)
 mask = Image.new('L', (tw, th), 0)
@@ -64,11 +60,11 @@ points = [
     ('实时跟随', 'Obsidian 改完自动更新'),
 ]
 grid_top = y0 + th + 70
-col_x = [150, 150]
-row_h = 118
+col_x = [110, 750]
+row_h = 146
 for index, (title, note) in enumerate(points):
     px = col_x[index % 2]
-    py = grid_top + index * row_h
+    py = grid_top + (index // 2) * row_h
     d.rounded_rectangle([px, py - 6, px + 52, py + 46], radius=12,
                         fill=(238, 242, 252))
     d.ellipse([px + 18, py + 10, px + 34, py + 26], fill=ACCENT)
@@ -76,7 +72,7 @@ for index, (title, note) in enumerate(points):
     d.text((px + 72, py + 60), note, font=font(33), fill=MUTED)
 
 # Install card.
-card_top = grid_top + 4 * row_h + 30
+card_top = grid_top + 2 * row_h + 18
 d.rounded_rectangle([86, card_top, W - 86, card_top + 176], radius=20,
                     outline=LINE, width=2, fill=(250, 251, 253))
 d.text((126, card_top + 26), '安装', font=font(30), fill=MUTED)
