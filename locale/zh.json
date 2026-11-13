@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "dsh-notta",
+    "description": "在左侧栏「自动化任务」下方打开笔记。一次只打开一个资料库，默认是 /Users/ruska/Documents/ob资料库，可在面板里换成别的文件夹。正文用 mdian 和 react-markdown 按 Obsidian 格式渲染：内部链接、嵌入、标注、高亮、表格、公式和 Mermaid。笔记只读；可以给 .base 新建视图。"
+  }
+}

@@ -1,0 +1,7 @@
+# dsh-notta：左侧栏「自动化任务」下方的笔记面板。
+# 浏览器半身由 package.json 的 dsh.client 声明。
+- insert:
+    - id: dsh-notta
+      name: dsh-notta
+      config:
+        vaultPath: /Users/ruska/Documents/ob资料库
