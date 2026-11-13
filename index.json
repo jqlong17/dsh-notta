@@ -1,0 +1,39 @@
+{
+  "format": 1,
+  "title": {
+    "en": "jqlong17's DSH plugins",
+    "zh": "jqlong17 的 DSH 插件"
+  },
+  "description": {
+    "en": "Plugins for DeepSeek Harness.",
+    "zh": "给 DeepSeek Harness 用的插件。"
+  },
+  "plugins": [
+    {
+      "name": "dsh-notta",
+      "title": {
+        "en": "Notes",
+        "zh": "笔记"
+      },
+      "description": {
+        "en": "Reads an Obsidian vault with Obsidian Flavored Markdown: wikilinks, embeds, callouts, Bases, PDF and editing.",
+        "zh": "打开一个 Obsidian 资料库：内部链接、嵌入、标注、Bases 视图、PDF 和编辑都在面板里。"
+      },
+      "icon": "https://raw.githubusercontent.com/jqlong17/dsh-notta/main/icon.svg",
+      "author": "jqlong17",
+      "homepage": "https://github.com/jqlong17/dsh-notta",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "publishTimestamp": 1794586940,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": ">=0.2.2-rc.1"
+          }
+        }
+      ]
+    }
+  ]
+}
