@@ -128,3 +128,9 @@ npm run release -- patch   # 或 minor / major
 ```
 
 它会检查登录、要求工作区干净、改版本、构建、发 npm、等 registry 返回真实发布时间、更新 `index.json`、提交并推送。
+
+首发会进入 npm 的暂存审核（`npm view` 只看到 `0.0.0-stage`，再次发布会报 409），审核通过后再对齐索引时间戳：
+
+```sh
+npm run sync:index
+```

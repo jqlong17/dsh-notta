@@ -44,7 +44,8 @@
     "test:routes": "node --experimental-strip-types ./scripts/test-routes.mjs",
     "test": "npm run check:vault && npm run test:routes",
     "build:editor": "node ./scripts/build-editor.mjs",
-    "release": "node ./scripts/release.mjs"
+    "release": "node ./scripts/release.mjs",
+    "sync:index": "node ./scripts/sync-index.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.1",
