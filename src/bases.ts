@@ -4,19 +4,11 @@
  * Obsidian 1.15's filters, formulas, sort, groups and summaries; this module
  * only feeds it the vault index and shapes the result for the panel.
  */
-import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 
-import { parse as parseYaml } from 'yaml'
-import {
-  parseBase,
-  runQuery,
-  toDisplay,
-  type BaseFile,
-  type Value,
-} from '@type32/obsidian-bases-parser'
+import { parseBase, runQuery, toDisplay, type Value } from '@type32/obsidian-bases-parser'
 
-import { flatten, readTree } from './vault.ts'
+import { buildGraph, resolveLink } from './graph.ts'
 
 export interface BaseRow {
   path: string
@@ -47,10 +39,6 @@ export interface BaseDocument {
   error?: string
 }
 
-const MAX_FILES = 2000
-const WIKI = /(!?)\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]*))?\]\]/g
-const TAG = /(^|[\s(（])#([^\s#)\]】，。、]+)/g
-
 function formatDate(ms: number, withTime: boolean): string {
   const date = new Date(ms)
   const pad = (value: number) => String(value).padStart(2, '0')
@@ -74,80 +62,17 @@ export async function renderBase(root: string, text: string, basePath = ''): Pro
   if (parsed.error) return { views: [], error: parsed.error }
   const base = parsed.base
 
-  const listed = await readTree(root)
-  const index = flatten(listed.tree).slice(0, MAX_FILES)
-
-  const files = new Map<string, BaseFile>()
-  const byStem = new Map<string, string>()
-  const backlinkMap = new Map<string, string[]>()
-
-  for (const entry of index) {
-    const absolute = path.join(root, entry.path)
-    const info = await stat(absolute).catch(() => undefined)
-    let frontmatter: Record<string, unknown> | undefined
-    const tags: string[] = []
-    const links: Array<{ link: string; display: string }> = []
-    const embeds: Array<{ link: string; display: string }> = []
-    if (entry.ext === 'md' || entry.ext === 'markdown') {
-      try {
-        const raw = await readFile(absolute, 'utf8')
-        const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw)
-        if (match) {
-          try {
-            const yaml = parseYaml(match[1] ?? '')
-            if (yaml && typeof yaml === 'object' && !Array.isArray(yaml)) frontmatter = yaml as Record<string, unknown>
-          } catch {
-            frontmatter = undefined
-          }
-        }
-        const body = match ? raw.slice(match[0].length) : raw
-        for (const found of body.matchAll(TAG)) tags.push(`#${found[2] ?? ''}`)
-        for (const found of raw.matchAll(WIKI)) {
-          const link = (found[2] ?? '').trim()
-          if (!link) continue
-          const entryLink = { link, display: found[3] || link }
-          if (found[1] === '!') embeds.push(entryLink)
-          else links.push(entryLink)
-        }
-      } catch {
-        // An unreadable note still appears with file.* only.
-      }
-    }
-    files.set(entry.path, {
-      path: entry.path,
-      ctime: info?.birthtimeMs ?? 0,
-      mtime: info?.mtimeMs ?? 0,
-      size: info?.size ?? 0,
-      frontmatter,
-      tags,
-      links,
-      embeds,
-    })
-    byStem.set(entry.stem, entry.path)
-    for (const link of [...links, ...embeds]) {
-      const list = backlinkMap.get(link.link) ?? []
-      list.push(entry.path)
-      backlinkMap.set(link.link, list)
-    }
-  }
-
-  const resolve = (link: string, _from: string): string | null => {
-    const clean = link.replace(/^\.\//, '')
-    if (files.has(clean)) return clean
-    if (files.has(`${clean}.md`)) return `${clean}.md`
-    return byStem.get(clean.replace(/\.[^.]+$/, '')) ?? null
-  }
-
+  const graph = await buildGraph(root)
   const host = {
-    file: (target: string) => files.get(target) ?? null,
-    resolve,
-    backlinks: (target: string) => backlinkMap.get(target) ?? [],
+    file: (target: string) => graph.nodes.get(target) ?? null,
+    resolve: (link: string, _from: string) => resolveLink(graph, link),
+    backlinks: (target: string) => graph.backlinks.get(target) ?? [],
   }
 
-  const paths = [...files.keys()]
+  const paths = graph.paths
   const views: BaseView[] = []
   const notes: string[] = []
-  if (listed.truncated) notes.push(`资料库文件太多，只检查了前 ${index.length} 个。`)
+  if (graph.truncated) notes.push(`资料库文件太多，只检查了前 ${graph.paths.length} 个。`)
 
   for (const view of base.views) {
     const result = runQuery(base, view.name, {
@@ -166,7 +91,7 @@ export async function renderBase(root: string, text: string, basePath = ''): Pro
     const toRow = (row: (typeof result.rows)[number]): BaseRow => {
       const values: Record<string, string> = {}
       for (const column of columns) values[column] = displayValue(row.property(column))
-      const file = files.get(row.path)
+      const file = graph.nodes.get(row.path)
       const name = displayValue(row.property('file.name')) || (row.path.split('/').pop() ?? row.path)
       return {
         path: row.path,

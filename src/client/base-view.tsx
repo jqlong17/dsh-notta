@@ -13,6 +13,8 @@ interface BaseViewProps {
   onSetFilter: (view: string, expression: string) => Promise<void>
   onMoveView: (view: string, index: number) => Promise<number>
   t: (key: string) => string
+  /** Embedded in a note: read-only, no tabs menu or edit actions. */
+  embedded?: boolean
 }
 
 const LABELS: Record<string, string> = {
@@ -201,7 +203,7 @@ function BoardView({ view, onOpenNote }: { view: BaseDocument['views'][number]; 
 }
 
 export function BaseView({
-  doc, onOpenNote, onAddView, onRenameView, onDeleteView, onSetLayout, onSetFilter, onMoveView, t,
+  doc, onOpenNote, onAddView, onRenameView, onDeleteView, onSetLayout, onSetFilter, onMoveView, t, embedded = false,
 }: BaseViewProps) {
   const [active, setActive] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -294,15 +296,15 @@ export function BaseView({
             {item.name}
           </button>
         ))}
-        <button
+        {embedded ? null : <button
           type="button"
           className={`nt-base-menu${menuOpen ? ' is-on' : ''}`}
           title={t('base.viewSettings')}
           aria-label={t('base.viewSettings')}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((value) => !value)}
-        >⋯</button>
-        <button
+        >⋯</button>}
+        {embedded ? null : <button
           type="button"
           className="nt-base-add"
           disabled={busy}
@@ -315,7 +317,7 @@ export function BaseView({
           }}
         >
           {busy ? '…' : `+ ${t('base.addView')}`}
-        </button>
+        </button>}
       </div>
 
       {menuOpen

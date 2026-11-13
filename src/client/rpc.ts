@@ -56,6 +56,13 @@ export interface BaseDocument {
   error?: string
 }
 
+export interface FileRecord {
+  path: string
+  kind: string
+  ext: string
+  base?: BaseDocument
+}
+
 export interface NoteRecord {
   path: string
   kind: 'markdown' | 'pdf' | 'image' | 'audio' | 'video' | 'base' | 'text' | 'binary'
@@ -64,7 +71,7 @@ export interface NoteRecord {
   text?: string
   properties?: NoteProperty[]
   embeds?: Record<string, { markdown: string; title: string; path: string }>
-  files?: Record<string, { path: string; kind: string; ext: string }>
+  files?: Record<string, FileRecord>
   noteDir?: string
   base?: BaseDocument
 }

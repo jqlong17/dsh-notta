@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "dsh-notta",
-    "description": "Opens a notes panel in the left sidebar under Automation tasks. One vault at a time, defaulting to /Users/ruska/Documents/ob资料库, changeable in the panel. Notes render with mdian and react-markdown using Obsidian formatting: wikilinks, embeds, callouts, highlights, tables, math, Mermaid and Bases views. Entries can be created, renamed, deleted and dragged, and notes are editable in CodeMirror with autosave. Deletes go to .trash."
+    "description": "Notes panel for Obsidian vaults: links, embeds, callouts, highlights, tables, math, Mermaid and Bases views; create/rename/delete/drag entries, edit in CodeMirror with autosave, ⌘⇧F vault search, backlinks, and inline ![[x.base]] tables. Deletes go to .trash."
   }
 }

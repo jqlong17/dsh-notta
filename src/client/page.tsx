@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { assetUrl, type IndexEntry, type NoteRecord, type RpcResult, type TreeNode, type VaultStatus } from './rpc.ts'
+import { Backlinks } from './backlinks.tsx'
 import { BaseView } from './base-view.tsx'
 import { MarkdownEditor } from './markdown-editor.tsx'
 import { MarkdownView } from './markdown.tsx'
@@ -208,6 +209,10 @@ export function NotesPage({ rpc, t, dense = false }: NotesPageProps) {
   } | undefined>()
   const [pendingDelete, setPendingDelete] = useState<{ path: string; name: string } | undefined>()
   const [notice, setNotice] = useState<string | undefined>()
+  const [query, setQuery] = useState('')
+  const [hits, setHits] = useState<Array<{ path: string; title: string; kind: string; count: number }> | undefined>()
+  const [searching, setSearching] = useState(false)
+  const searchInput = useRef<HTMLInputElement | null>(null)
   const [renaming, setRenaming] = useState<string | undefined>()
   const [renameDraft, setRenameDraft] = useState('')
   const [dropTarget, setDropTarget] = useState<string | undefined>()
@@ -546,6 +551,34 @@ export function NotesPage({ rpc, t, dense = false }: NotesPageProps) {
     setMode('edit')
   }, [doc])
 
+  useEffect(() => {
+    const text = query.trim()
+    if (!text) {
+      setHits(undefined)
+      return
+    }
+    setSearching(true)
+    const timer = window.setTimeout(() => {
+      void rpc<{ hits: Array<{ path: string; title: string; kind: string; count: number }> }>('search', { query: text })
+        .then((result) => {
+          setHits(result.ok ? result.value.hits : [])
+        })
+        .finally(() => setSearching(false))
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [query, rpc])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.key.toLowerCase() !== 'f') return
+      event.preventDefault()
+      searchInput.current?.focus()
+      searchInput.current?.select()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const refresh = useCallback(async () => {
     setRefreshing(true)
     try {
@@ -674,6 +707,23 @@ export function NotesPage({ rpc, t, dense = false }: NotesPageProps) {
             ? null
             : <button type="button" className="nt-btn" onClick={() => void browse(status?.vaultPath)}>{t('tree.change')}</button>}
         </div>
+        <div className="nt-search">
+          <input
+            ref={searchInput}
+            className="nt-input"
+            value={query}
+            placeholder={t('tree.searchPlaceholder')}
+            aria-label={t('tree.searchPlaceholder')}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setQuery('')
+                event.currentTarget.blur()
+              }
+            }}
+          />
+          {query ? <button type="button" className="nt-btn nt-icon-btn" onClick={() => setQuery('')} aria-label={t('tree.searchClear')}>×</button> : null}
+        </div>
         {notice ? <div className="nt-notice">{notice}</div> : null}
         <div
           className={`nt-tree-body${dropTarget === '__root__' ? ' is-drop' : ''}`}
@@ -698,9 +748,32 @@ export function NotesPage({ rpc, t, dense = false }: NotesPageProps) {
             setMenu({ x: event.clientX, y: event.clientY, dir: '' })
           }}
         >
-          {loading && tree.length === 0 ? <div className="nt-state">{t('state.loading')}</div> : null}
+          {query.trim()
+            ? (
+              <div className="nt-search-results">
+                <div className="nt-search-meta">
+                  {searching ? t('tree.searching') : t('tree.searchResults').replace('{n}', String(hits?.length ?? 0))}
+                </div>
+                {(hits ?? []).map((hit) => (
+                  <button
+                    type="button"
+                    className="nt-search-row"
+                    key={hit.path}
+                    title={hit.path}
+                    onClick={() => void openPath(hit.path)}
+                  >
+                    <span className="nt-search-name">{hit.title}</span>
+                    <span className="nt-search-path">{hit.path}</span>
+                    <span className="nt-search-count">{hit.count}</span>
+                  </button>
+                ))}
+                {!searching && hits && hits.length === 0 ? <div className="nt-state">{t('tree.searchEmpty')}</div> : null}
+              </div>
+            )
+            : null}
+          {query.trim() ? null : loading && tree.length === 0 ? <div className="nt-state">{t('state.loading')}</div> : null}
           {!loading && tree.length === 0 && !error ? <div className="nt-state">{t('state.emptyVault')}</div> : null}
-          {tree.map((node) => (
+          {query.trim() ? null : tree.map((node) => (
             <TreeRow
               key={node.path}
               node={node}
@@ -791,6 +864,7 @@ export function NotesPage({ rpc, t, dense = false }: NotesPageProps) {
           ) : null}
 
           {!error && doc?.kind === 'markdown' && mode === 'read' ? (
+            <>
             <MarkdownView
               markdown={doc.text ?? ''}
               embeds={doc.embeds}
@@ -800,6 +874,8 @@ export function NotesPage({ rpc, t, dense = false }: NotesPageProps) {
               rpc={rpc}
               t={t}
             />
+            <Backlinks path={doc.path} rpc={rpc} onOpenNote={(path) => void openPath(path)} t={t} />
+            </>
           ) : null}
 
           {!error && doc?.kind === 'markdown' && mode === 'edit' ? (

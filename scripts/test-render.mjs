@@ -3,14 +3,24 @@
  * uses, then assert the Obsidian formats survive.
  */
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 
 import { build } from 'esbuild'
 
 const repo = path.resolve(import.meta.dirname, '..')
-const notePath = '/Users/ruska/Documents/ob资料库/笔记1.md'
-const embedPath = '/Users/ruska/Documents/ob资料库/笔记2.md'
+const vault = '/Users/ruska/Documents/ob资料库'
+const notes = (await readdir(vault, { recursive: true }))
+  .filter((name) => name.endsWith('.md'))
+  // Skip hidden folders such as .trash, which holds deleted notes.
+  .filter((name) => !String(name).split('/').some((part) => part.startsWith('.')))
+  .sort()
+if (notes.length === 0) {
+  console.error('vault has no markdown notes')
+  process.exit(1)
+}
+const notePath = path.join(vault, notes[0])
+const embedPath = notes[1] ? path.join(vault, notes[1]) : ''
 
 function stripFrontmatter(text) {
   const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(text)
@@ -38,6 +48,7 @@ const { render, renderPage, renderBaseTable } = await import(`file://${outfile}`
 const markdown = stripFrontmatter(await readFile(notePath, 'utf8'))
 let embed
 try {
+  if (!embedPath) throw new Error('no second note')
   embed = stripFrontmatter(await readFile(embedPath, 'utf8'))
 } catch {
   // The vault may not have the second note any more; the embed check is optional.
@@ -133,6 +144,7 @@ assert.doesNotMatch(wide, /class="nt-root is-dense"/)
 const narrow = renderPage(true)
 assert.match(narrow, /class="nt-root is-dense"/)
 assert.match(narrow, /nt-tree-collapse/)
+assert.match(narrow, /aria-label="tree\.searchPlaceholder"/)
 assert.match(narrow, /aria-label="tree\.newNote"/)
 assert.match(narrow, /aria-label="tree\.newFolder"/)
 assert.match(narrow, /reader\.refresh/)

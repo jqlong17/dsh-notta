@@ -26,6 +26,7 @@ import {
 } from '@type32/obsidian-bases-parser'
 
 import { renderBase } from './bases.ts'
+import { buildGraph, resolveLink } from './graph.ts'
 import { splitFrontmatter, type NoteProperty } from './frontmatter.ts'
 
 import { readSavedPath, settingsFile, writeSavedPath, type NottaConfig } from './settings.ts'
@@ -487,6 +488,38 @@ async function dispatch(store: VaultStore, op: string, payload: Record<string, u
       base: await renderBase(root, written, rel),
     }
   }
+  if (op === 'links') {
+    const rel = String(payload.path || '')
+    const graph = await buildGraph(root)
+    const node = graph.nodes.get(rel)
+    if (!node) throw new VaultError('not-found', '找不到这篇笔记')
+    const nameOf = (target: string): string => graph.nodes.get(target)?.name ?? target
+    const backlinks = [...new Set(graph.backlinks.get(rel) ?? [])]
+      .map((source) => ({ path: source, title: nameOf(source) }))
+    const seen = new Set<string>()
+    const outlinks = []
+    for (const link of node.links) {
+      const target = resolveLink(graph, link.link)
+      const key = target ?? link.link
+      if (seen.has(key)) continue
+      seen.add(key)
+      outlinks.push({
+        label: link.display,
+        path: target,
+        title: target ? nameOf(target) : null,
+      })
+    }
+    const embeds = []
+    const seenEmbeds = new Set<string>()
+    for (const embed of node.embeds) {
+      const target = resolveLink(graph, embed.link)
+      const key = target ?? embed.link
+      if (seenEmbeds.has(key)) continue
+      seenEmbeds.add(key)
+      embeds.push({ label: embed.display, path: target, title: target ? nameOf(target) : null })
+    }
+    return { path: rel, backlinks, outlinks, embeds }
+  }
   if (op === 'search') {
     const query = String(payload.query || '')
     if (!query.trim()) throw new VaultError('empty-query', '搜索内容不能为空')
@@ -519,12 +552,26 @@ async function dispatch(store: VaultStore, op: string, payload: Record<string, u
     if (kind === 'markdown') {
       // Every wiki target resolves by vault name, so `![[photo.png]]` works no
       // matter which folder holds the attachment.
+      const embedTargets = new Set<string>()
+      for (const embedded of split.body.matchAll(/!\[\[([^\]|#]+)/g)) {
+        const target = (embedded[1] ?? '').trim()
+        if (target) embedTargets.add(target)
+      }
       for (const target of wikiTargets(split.body)) {
         const hit = findByTarget(index, target)
         if (!hit) continue
-        const record = { path: hit.path, kind: kindFor(hit.ext), ext: hit.ext }
-        files[target] = record
-        if (!files[hit.path]) files[hit.path] = record
+        const record: Record<string, unknown> = { path: hit.path, kind: kindFor(hit.ext), ext: hit.ext }
+        // An embedded base is evaluated here so the panel can draw its table.
+        if (hit.ext === 'base' && embedTargets.has(target)) {
+          try {
+            const baseText = (await readNote(root, hit.path)).text
+            record.base = await renderBase(root, baseText, hit.path)
+          } catch {
+            // Leave it as a plain file chip when it cannot be read.
+          }
+        }
+        files[target] = record as { path: string; kind: string; ext: string }
+        if (!files[hit.path]) files[hit.path] = record as { path: string; kind: string; ext: string }
         if (hit.ext !== 'md' && hit.ext !== 'markdown') continue
         if (embeds[target] || embeds[hit.stem]) continue
         try {

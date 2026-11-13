@@ -10,7 +10,8 @@ import rehypeKatex from 'rehype-katex'
 import rehypeRaw from 'rehype-raw'
 import { rehypeOfm, remarkOfm } from 'mdian'
 
-import { assetUrl, type NoteProperty, type RpcResult } from './rpc.ts'
+import { assetUrl, type BaseDocument, type NoteProperty, type RpcResult } from './rpc.ts'
+import { BaseView } from './base-view.tsx'
 import { rehypeVaultHtml } from './sanitize.ts'
 
 export interface EmbedMap {
@@ -25,7 +26,7 @@ export interface SearchHit {
 }
 
 export interface FileMap {
-  [key: string]: { path: string; kind: string; ext: string }
+  [key: string]: { path: string; kind: string; ext: string; base?: BaseDocument }
 }
 
 export interface MarkdownProps {
@@ -690,6 +691,22 @@ export function MarkdownView({ markdown, embeds, files, properties, onOpenNote, 
         const fragment = prop(node, 'dataOfmFragment')
         if (kind === 'embed' && variant === 'file') {
           const resolved = files?.[target ?? '']
+          if (resolved?.base) {
+            return (
+              <BaseView
+                doc={resolved.base}
+                embedded
+                onOpenNote={onOpenNote}
+                onAddView={async () => {}}
+                onRenameView={async () => {}}
+                onDeleteView={async () => {}}
+                onSetLayout={async () => {}}
+                onSetFilter={async () => {}}
+                onMoveView={async () => 0}
+                t={t ?? ((key: string) => key)}
+              />
+            )
+          }
           if (resolved) {
             if (resolved.kind === 'pdf') return <PdfEmbed path={resolved.path} fragment={fragment} title={target ?? resolved.path} />
             if (resolved.kind === 'audio') return <AudioEmbed path={resolved.path} title={target ?? resolved.path} />
