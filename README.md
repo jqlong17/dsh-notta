@@ -112,3 +112,19 @@ npm run build     # 生成 lib/index.js、lib/client.js 和 vendor/
 ## 许可
 
 MIT。第三方组件：mdian（Apache-2.0）、react-markdown、remark、rehype、KaTeX、Mermaid（均 MIT）。
+
+## 发布
+
+首次需要登录一次（token 会存在 `~/.npmrc`，按 registry 分开，不影响镜像配置）：
+
+```sh
+npm login --auth-type=web --registry=https://registry.npmjs.org
+```
+
+之后每次发版一条命令：
+
+```sh
+npm run release -- patch   # 或 minor / major
+```
+
+它会检查登录、要求工作区干净、改版本、构建、发 npm、等 registry 返回真实发布时间、更新 `index.json`、提交并推送。
