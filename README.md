@@ -1,5 +1,7 @@
 # dsh-notta
 
+![笔记：Obsidian 兼容的笔记面板](docs/promo-3x4.png)
+
 在 DSH 左侧栏「自动化任务」下方打开的笔记面板。左边是资料库的文件树，右边按 Obsidian 的格式渲染正文。
 
 一次只打开一个资料库，默认 `/Users/ruska/Documents/ob资料库`，可以在面板里换成别的文件夹。
