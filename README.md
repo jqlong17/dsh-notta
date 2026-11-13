@@ -4,6 +4,20 @@
 
 一次只打开一个资料库，默认 `/Users/ruska/Documents/ob资料库`，可以在面板里换成别的文件夹。
 
+## 安装
+
+```sh
+dsh plugin --profile desktop add dsh-notta
+```
+
+或者在插件页的 Discover 里添加市场索引：
+
+```
+https://raw.githubusercontent.com/jqlong17/dsh-notta/main/index.json
+```
+
+要求 DSH `>=0.2.2-rc.1`。装完刷新页面，左侧栏「自动化任务」下面会出现「笔记」。
+
 ## 用法
 
 两个入口共用同一套页面和数据：
