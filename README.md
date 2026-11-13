@@ -35,7 +35,7 @@ https://raw.githubusercontent.com/jqlong17/dsh-notta/main/index.json
 6. 面板会**实时跟随磁盘变化**：在 Obsidian 或 Finder 里改名、新建、删除文件，这边自动更新（宿主用 `fs.watch` 监听资料库，通过 SSE 推给页面），不用手动刷新。
 3. 点「更换资料库」，在目录对话框里选另一个文件夹，选「用这个文件夹」生效。
 
-资料库路径保存在 `$DSH_HOME/dsh-notta/settings.json`。笔记**只读**；唯一会写文件的操作是 Bases 视图里的「新建视图」，它会往对应的 `.base` 追加一个 `type: table` 的视图（用 Obsidian 的格式写回），不改动其他内容。
+资料库路径保存在 `$DSH_HOME/dsh-notta/settings.json`。面板会写文件：新建/重命名/删除条目、拖拽移动、保存笔记正文、编辑 `.base` 视图。删除是移到资料库的 `.trash`，不会真删。
 
 ## 支持的格式
 
@@ -80,59 +80,9 @@ Obsidian 的 Bases 不是数据库，`.base` 只是一个 YAML 视图定义：�
 
 ## 与 Obsidian 的差异
 
-- 只读，不能新建、编辑、重命名笔记。
-- 图谱、反向链接、Canvas、Bases 没有做；全文面板搜索没有做，只有笔记里的 `query` 嵌入。
-- 属性只展示，不能编辑。
-- 搜索嵌入只支持 `path:`、`file:`、`tag:` 和普通词，不支持 Obsidian 的 `line:`、`section:`、布尔组合等完整语法。
-- 白板卡片里的文字不渲染。
-- `![[x.base]]` 只显示文件标签；直接打开 `.base` 文件会看到表格视图，支持 table 类型、`filters`（`==`/`!=`/`contains`/`startsWith`/`endsWith`/`file.hasTag`，多个条件是「且」）、`sort`、`order`/`columns`、`limit`。cards、公式、分组、汇总、`links` 之类的关系条件还没实现，会在表格下方注明被忽略的部分。
-- 外部网页嵌入（iframe）按 Markdown 原样显示，不加载远程页面。
-
-## 目录结构
-
-```
-src/index.ts        宿主半身：路由注册
-src/rpc.ts          同源 RPC、资源路由、目录浏览
-src/vault.ts        文件树、路径校验、笔记读取
-src/settings.ts     资料库路径的读写与回落
-src/client/index.tsx  面板入口与侧栏图标
-src/client/page.tsx   文件树 + 阅读视图
-src/client/markdown.tsx  Markdown 渲染与 Obsidian 组件覆盖
-scripts/            构建脚本
-vendor/             构建产物：KaTeX 样式与字体、mdian 样式、按需加载的 Mermaid/PDF.js/CodeMirror
-```
-
-## 开发
-
-```sh
-npm install --legacy-peer-deps
-npm run build     # 生成 lib/index.js、lib/client.js 和 vendor/
-```
-
-`--legacy-peer-deps` 是因为 mdian 把 `react-markdown@10` 声明为可选 peer，而本插件跟随宿主使用 React 18 与 react-markdown 9。
-
-## 许可
-
-MIT。第三方组件：mdian（Apache-2.0）、react-markdown、remark、rehype、KaTeX、Mermaid（均 MIT）。
-
-## 发布
-
-首次需要登录一次（token 会存在 `~/.npmrc`，按 registry 分开，不影响镜像配置）：
-
-```sh
-npm login --auth-type=web --registry=https://registry.npmjs.org
-```
-
-之后每次发版一条命令：
-
-```sh
-npm run release -- patch   # 或 minor / major
-```
-
-它会检查登录、要求工作区干净、改版本、构建、发 npm、等 registry 返回真实发布时间、更新 `index.json`、提交并推送。
-
-首发会进入 npm 的暂存审核（`npm view` 只看到 `0.0.0-stage`，再次发布会报 409），审核通过后再对齐索引时间戳：
-
-```sh
-npm run sync:index
-```
+- 编辑是**源码编辑**（CodeMirror 6），不是所见即所得；记号在编辑时可见，保存后原样写回。
+- 图谱、反向链接、全局搜索没有做；只有笔记里的 `query` 嵌入会检索。
+- `.canvas` 白板只显示文件信息，不渲染卡片内容。
+- 属性只展示，不能改类型或新增。
+- `![[x.base]]` 只显示文件标签；直接打开 `.base` 才看得到表格。
+- 外部网页嵌入按原始 HTML 处理，不加载远程脚本。
